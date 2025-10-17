@@ -1,0 +1,144 @@
+C:\Users\14903\AppData\Local\Microsoft\WindowsApps\python3.13.exe C:\Users\14903\Downloads\32130-fda-at-3-competition-spr-2025\main.py 
+run time: 1760712570.8601358
+Loading data...
+Train shape: (83123, 24), Test shape: (20781, 23)
+
+Numeric cols: ['Age', 'Flight Distance', 'Inflight wifi service', 'Departure/Arrival time convenient', 'Ease of Online booking', 'Gate location', 'Food and drink', 'Online boarding', 'Seat comfort', 'Inflight entertainment', 'On-board service', 'Leg room service', 'Baggage handling', 'Checkin service', 'Inflight service', 'Cleanliness', 'Departure Delay in Minutes', 'Arrival Delay in Minutes']
+
+Categorical cols: ['Gender', 'Customer Type', 'Type of Travel', 'Class']
+
+Label mapping: {'neutral or dissatisfied': 0, 'satisfied': 1}
+
+Train/Val shapes: (66498, 22)/(16625, 22)
+============================================================
+🔍 交叉验证评估 LogisticRegression ...
+LogisticRegression:
+  ✅ mean F1_macro = 0.8717 (+/- 0.0035)
+  ✅ mean Accuracy = 0.8746 (+/- 0.0034)
+
+📊 混淆矩阵：
+[[8560  861]
+ [1123 6081]]
+
+📋 分类报告：
+              precision    recall  f1-score   support
+
+           0     0.8840    0.9086    0.8961      9421
+           1     0.8760    0.8441    0.8597      7204
+
+    accuracy                         0.8807     16625
+   macro avg     0.8800    0.8764    0.8779     16625
+weighted avg     0.8805    0.8807    0.8804     16625
+
+============================================================
+🔍 交叉验证评估 KNeighbors ...
+KNeighbors:
+  ✅ mean F1_macro = 0.9242 (+/- 0.0029)
+  ✅ mean Accuracy = 0.9262 (+/- 0.0028)
+
+📊 混淆矩阵：
+[[9034  387]
+ [ 852 6352]]
+
+📋 分类报告：
+              precision    recall  f1-score   support
+
+           0     0.9138    0.9589    0.9358      9421
+           1     0.9426    0.8817    0.9111      7204
+
+    accuracy                         0.9255     16625
+   macro avg     0.9282    0.9203    0.9235     16625
+weighted avg     0.9263    0.9255    0.9251     16625
+
+============================================================
+🔍 交叉验证评估 DecisionTree ...
+DecisionTree:
+  ✅ mean F1_macro = 0.9432 (+/- 0.0020)
+  ✅ mean Accuracy = 0.9441 (+/- 0.0019)
+
+📊 混淆矩阵：
+[[8904  517]
+ [ 451 6753]]
+
+📋 分类报告：
+              precision    recall  f1-score   support
+
+           0     0.9518    0.9451    0.9484      9421
+           1     0.9289    0.9374    0.9331      7204
+
+    accuracy                         0.9418     16625
+   macro avg     0.9403    0.9413    0.9408     16625
+weighted avg     0.9419    0.9418    0.9418     16625
+
+============================================================
+🔍 交叉验证评估 RandomForest ...
+RandomForest:
+  ✅ mean F1_macro = 0.9614 (+/- 0.0020)
+  ✅ mean Accuracy = 0.9622 (+/- 0.0020)
+
+📊 混淆矩阵：
+[[9221  200]
+ [ 434 6770]]
+
+📋 分类报告：
+              precision    recall  f1-score   support
+
+           0     0.9550    0.9788    0.9668      9421
+           1     0.9713    0.9398    0.9553      7204
+
+    accuracy                         0.9619     16625
+   macro avg     0.9632    0.9593    0.9610     16625
+weighted avg     0.9621    0.9619    0.9618     16625
+
+============================================================
+🔍 交叉验证评估 GaussianNB ...
+GaussianNB:
+  ✅ mean F1_macro = 0.8449 (+/- 0.0040)
+  ✅ mean Accuracy = 0.8481 (+/- 0.0038)
+
+📊 混淆矩阵：
+[[8291 1130]
+ [1252 5952]]
+
+📋 分类报告：
+              precision    recall  f1-score   support
+
+           0     0.8688    0.8801    0.8744      9421
+           1     0.8404    0.8262    0.8333      7204
+
+    accuracy                         0.8567     16625
+   macro avg     0.8546    0.8531    0.8538     16625
+weighted avg     0.8565    0.8567    0.8566     16625
+
+
+
+🏁 各模型交叉验证平均分对比：
+LogisticRegression   | F1=0.8717 | ACC=0.8746
+KNeighbors           | F1=0.9242 | ACC=0.9262
+DecisionTree         | F1=0.9432 | ACC=0.9441
+RandomForest         | F1=0.9614 | ACC=0.9622
+GaussianNB           | F1=0.8449 | ACC=0.8481
+Best model by CV F1_macro: RandomForest
+Running GridSearchCV on RandomForest (example)...
+Fitting 5 folds for each of 12 candidates, totalling 60 fits
+GridSearch best params: {'clf__max_depth': None, 'clf__min_samples_split': 5, 'clf__n_estimators': 200}
+GridSearch best score (F1_macro): 0.9616212956176614
+GridSearch RandomForest beats previous best. Selecting GridSearch RF as final model.
+Final model selected: RandomForest_GridSearch
+Evaluating on held-out validation set...
+Validation Accuracy: 0.9957, F1_macro: 0.9956
+Classification report (validation):
+                         precision    recall  f1-score   support
+
+neutral or dissatisfied       0.99      1.00      1.00      9421
+              satisfied       1.00      0.99      0.99      7204
+
+               accuracy                           1.00     16625
+              macro avg       1.00      1.00      1.00     16625
+           weighted avg       1.00      1.00      1.00     16625
+
+Predicting on test set...
+Saved my_submission.csv
+Saved final_model_pipeline.joblib
+
+进程已结束，退出代码为 0
