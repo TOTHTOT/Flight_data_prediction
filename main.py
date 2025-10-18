@@ -49,6 +49,7 @@ def infer_feature_types(df, id_col, target_col=None):
     # print("非数字\n", categorical_cols)
     return numeric_cols, categorical_cols
 
+# 使用 Pipeline 封装工作流水线
 def build_preprocessor(numeric_cols, categorical_cols):
     # 数值列：先用中位数填充，再标准化, 这里是个"流水线"按照你给定的步骤执行, 这里会封装两个步骤
     numeric_transformer = Pipeline(steps=[
@@ -62,7 +63,7 @@ def build_preprocessor(numeric_cols, categorical_cols):
         ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False))
     ])
 
-    # 将步骤组合转为纯数字矩阵方便训练
+    # 将步骤组合转为纯数字矩阵方便训练, 这里将 Pipeline 封装的流水线与数字列和分类列和对应, 后面训练时使用
     preprocessor = ColumnTransformer(transformers=[
         ("num", numeric_transformer, numeric_cols),
         ("cat", categorical_transformer, categorical_cols)
@@ -121,11 +122,11 @@ def main():
 
     # 目标编码, 按照需求就是 satisfaction 这一列数据
     y_raw = train[TARGET]
-    y, label_map = encode_target(y_raw)
+    train_target, label_map = encode_target(y_raw)
     print("\nLabel mapping:", label_map)
-    # print("\ny:", y)
+    # print("\nTrain_target:", train_target)
     # 特征矩阵, 这里去掉id列和satisfaction列, 实际训练的时候只有特征数据有用
-    x = train.drop(columns=[ID_COL, TARGET])
+    train_drop = train.drop(columns=[ID_COL, TARGET])
     # 如果测试集也有id的话也删除
     if ID_COL in test.columns:
         x_test = test.drop(columns=[ID_COL])
@@ -135,17 +136,17 @@ def main():
     # 建预处理器
     preprocessor = build_preprocessor(numeric_cols, categorical_cols)
 
-    # 拆分验证集, 按照 test_size 值拆分
+    # 拆分验证集, 按照 test_size 值拆分, 这里的功能用于验证老师要求的模型, 先拆分训练集然后用baseline_models()里的模型计算训练集数据从而拿到最适合的模型用于后续预测
     # | 变量名 | 含义 |
     # | --------- | --------------- |
     # | `x_train` | 用于训练模型的输入数据 |
     # | `x_val` | 用于验证（测试）模型的输入数据 |
     # | `y_train` | 训练集对应的标签 |
     # | `y_val` | 验证集对应的标签 |
-    x_train, x_val, y_train, y_val = train_test_split(x, # 训练集, 前面去除了 id 和 target的结果;
-                                                      y, # 目标, 也就是 satisfaction, x 和 y一一对应;
+    x_train, x_val, y_train, y_val = train_test_split(train_drop, # 训练集, 前面去除了 id 和 target的结果;
+                                                      train_target, # 目标, 也就是 satisfaction, train_drop 和 y一一对应;
                                                       test_size=0.2, # 表示验证集占全部数据的 20%, 训练集占 80%.
-                                                      stratify=y, # 拆分数据, 在拆分数据时, 按照标签 y 的分布比例来分割数据, 如果不这样可能会导致验证集比例失衡
+                                                      stratify=train_target, # 拆分数据, 在拆分数据时, 按照标签 train_target 的分布比例来分割数据, 如果不这样可能会导致验证集比例失衡
                                                       # 设置随机值, 粗浅可以理解为 train_test_split() 在随机抽取样本时的行为是随机的,
                                                       # 这里设置固定值, 让他行为不随机保证在不同电脑都能得到相同结果
                                                       random_state=RANDOM_STATE)
@@ -162,15 +163,16 @@ def main():
         print("=" * 60)
         print(f"🔍 交叉验证评估 {name} ...")
 
-        # 构建 pipeline（预处理 + 模型）
+        # 构建 pipeline（预处理 + 模型）, preprocessor 是 build_preprocessor()
+        # 的结果包含了表格中不同列执行的流程 categorical_transformer 和 numeric_transformer
         pipe = Pipeline(steps=[
             ("preproc", preprocessor),
             ("clf", clf)
         ])
 
         # ----- 1️⃣ F1-score 交叉验证 -----
-        f1_scores = cross_val_score(pipe, x, y, cv=cv, scoring="f1_macro", n_jobs=-1)
-        acc_scores = cross_val_score(pipe, x, y, cv=cv, scoring="accuracy", n_jobs=-1)
+        f1_scores = cross_val_score(pipe, train_drop, train_target, cv=cv, scoring="f1_macro", n_jobs=-1)
+        acc_scores = cross_val_score(pipe, train_drop, train_target, cv=cv, scoring="accuracy", n_jobs=-1)
 
         f1_mean, f1_std = f1_scores.mean(), f1_scores.std()
         acc_mean, acc_std = acc_scores.mean(), acc_scores.std()
@@ -215,17 +217,21 @@ def main():
     best_model_name = max(model_scores.items(), key=lambda kv: kv[1]['F1_mean'])[0]
     print("Best model by CV F1_macro:", best_model_name)
 
-    # 对部分模型做简单的 GridSearch（以 RandomForest 为例）
+    # 这里对模型进行调参测试, 由于前面的代码已经可以知道针对这部分数据 RandomForest 模型的分数最好
+    # 这里针对它进行优化调参, 使用 GridSearchCV 进行自动配置模型参数, 但是 GridSearchCV 需要先手动配置一下参数,
+    # 这部分代码之所以存在是因为老师要求的, 直接走 else的流程也行, 只不过使用的是 RandomForest 默认参数,
+    # 默认参数的得分可能没有优化后的高.
     if "RandomForest" in models:
         print("Running GridSearchCV on RandomForest (example)...")
         rf_pipe = Pipeline(steps=[("preproc", preprocessor), ("clf", RandomForestClassifier(random_state=RANDOM_STATE, n_jobs=-1))])
+        # 配置 GridSearchCV 的参数
         param_grid = {
             "clf__n_estimators": [100, 200],
             "clf__max_depth": [None, 10, 20],
             "clf__min_samples_split": [2, 5]
         }
         gs = GridSearchCV(rf_pipe, param_grid, cv=cv, scoring="f1_macro", n_jobs=-1, verbose=1)
-        gs.fit(x, y)
+        gs.fit(train_drop, train_target)
         print("GridSearch best params:", gs.best_params_)
         print("GridSearch best score (F1_macro):", gs.best_score_)
         # 如果 GridSearch 的最佳比之前最好的还好，就选它
@@ -236,20 +242,12 @@ def main():
         else:
             # 否则用之前选出的
             final_pipeline = Pipeline(steps=[("preproc", preprocessor), ("clf", models[best_model_name])])
-            final_pipeline.fit(x, y)
+            final_pipeline.fit(train_drop, train_target)
             final_name = best_model_name
     else:
         final_pipeline = Pipeline(steps=[("preproc", preprocessor), ("clf", models[best_model_name])])
-        final_pipeline.fit(x, y)
+        final_pipeline.fit(train_drop, train_target)
         final_name = best_model_name
-
-    # 如果 final_pipeline 还没 fit（比如选用 GridSearch 的 gs.best_estimator_ 已经 fit），确保我们有拟合模型
-    try:
-        # 若 estimator 已经 fit，上面一定有；否则 fit
-        if not hasattr(final_pipeline, "predict"):
-            final_pipeline.fit(x, y)
-    except Exception:
-        final_pipeline.fit(x, y)
 
     print("Final model selected:", final_name)
 
@@ -270,7 +268,7 @@ def main():
     test_pred_int = final_pipeline.predict(x_test)
     test_pred_labels = inverse_label_map(test_pred_int, label_map)
 
-    # 生成 submission
+    # 生成 submission, 用 pd 库生成csv列表文件
     submission = pd.DataFrame({
         "ID": test[ID_COL] if ID_COL in test.columns else np.arange(len(test_pred_labels)),
         "label": test_pred_labels
