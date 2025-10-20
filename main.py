@@ -231,7 +231,7 @@ def main():
             "clf__min_samples_split": [2, 5]
         }
         gs = GridSearchCV(rf_pipe, param_grid, cv=cv, scoring="f1_macro", n_jobs=-1, verbose=1)
-        gs.fit(train_drop, train_target)
+        gs.fit(x_train, y_train)
         print("GridSearch best params:", gs.best_params_)
         print("GridSearch best score (F1_macro):", gs.best_score_)
         # 如果 GridSearch 的最佳比之前最好的还好，就选它
@@ -242,11 +242,11 @@ def main():
         else:
             # 否则用之前选出的
             final_pipeline = Pipeline(steps=[("preproc", preprocessor), ("clf", models[best_model_name])])
-            final_pipeline.fit(train_drop, train_target)
+            final_pipeline.fit(x_train, y_train)
             final_name = best_model_name
     else:
         final_pipeline = Pipeline(steps=[("preproc", preprocessor), ("clf", models[best_model_name])])
-        final_pipeline.fit(train_drop, train_target)
+        final_pipeline.fit(x_train, y_train)
         final_name = best_model_name
 
     print("Final model selected:", final_name)
